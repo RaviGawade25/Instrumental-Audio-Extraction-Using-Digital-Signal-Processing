@@ -1,0 +1,130 @@
+% =========================================================
+% DSP Course Project: Vocal Suppression (Window-Based FIR)
+% Method: Side Channel + FIR Band-Stop (Hamming Window)
+% =========================================================
+
+clc;
+clear;
+close all;
+
+%% --------------------------------------------------------
+% STEP 1: SELECT STEREO AUDIO FILE
+% ---------------------------------------------------------
+[file, path] = uigetfile({'*.wav;*.mp3','Audio Files'}, ...
+                         'Select Stereo Audio File');
+if isequal(file,0)
+    error('No audio file selected');
+end
+
+[x, Fs] = audioread(fullfile(path,file));
+
+if size(x,2) ~= 2
+    error('Stereo audio required');
+end
+
+L = x(:,1);
+R = x(:,2);
+
+%% --------------------------------------------------------
+% STEP 2: SIDE CHANNEL EXTRACTION
+% ---------------------------------------------------------
+Side = (L - R)/2;
+Side = Side - mean(Side);
+Side = Side / max(abs(Side));
+
+%% --------------------------------------------------------
+% STEP 3: FIR BAND-STOP FILTER DESIGN (WINDOW METHOD)
+% ---------------------------------------------------------
+% Vocal frequency range
+Wc1 = 300;     % Lower cutoff frequency (Hz)
+Wc2 = 3400;    % Upper cutoff frequency (Hz)
+
+% Normalized cutoffs
+Wn = [Wc1 Wc2] / (Fs/2);
+
+% FIR filter order
+N = 200;
+
+% Window selection
+window_type = hamming(N+1);
+
+% FIR Band-stop filter using window method
+b = fir1(N, Wn, 'stop', window_type);
+
+%% --------------------------------------------------------
+% STEP 4: FILTER FREQUENCY RESPONSE (WITH Wc)
+% ---------------------------------------------------------
+[H, f] = freqz(b, 1, 4096, Fs);
+
+figure('Color','w');
+plot(f, abs(H), 'LineWidth', 1.5); hold on;
+grid on;
+
+xline(Wc1, '--r', 'Wc_1 = 300 Hz', 'LineWidth', 1.2);
+xline(Wc2, '--r', 'Wc_2 = 3400 Hz', 'LineWidth', 1.2);
+
+xlabel('Frequency (Hz)');
+ylabel('|H(f)|');
+title('FIR Band-Stop Filter Frequency Response (Hamming Window)');
+xlim([0 5000]);
+
+%% --------------------------------------------------------
+% STEP 5: APPLY FIR FILTER
+% ---------------------------------------------------------
+Instrumental = filtfilt(b, 1, Side);
+Instrumental = Instrumental / max(abs(Instrumental));
+
+audiowrite('Instrumental_Output.wav', Instrumental, Fs);
+sound(Instrumental, Fs);
+
+%% --------------------------------------------------------
+% STEP 6: TIME & FREQUENCY DOMAIN ANALYSIS
+% ---------------------------------------------------------
+Nfft = 4096;
+faxis = (0:Nfft/2-1)*(Fs/Nfft);
+
+Side_fft = abs(fft(Side, Nfft));
+Out_fft  = abs(fft(Instrumental, Nfft));
+
+% INPUT SIGNAL
+figure('Color','w');
+subplot(2,1,1);
+plot(Side); grid on;
+title('Input Signal (Side Channel) – Time Domain');
+xlabel('Samples'); ylabel('Amplitude');
+
+subplot(2,1,2);
+plot(faxis, Side_fft(1:Nfft/2)); grid on;
+title('Input Signal – Frequency Domain');
+xlabel('Frequency (Hz)'); ylabel('Magnitude');
+xlim([0 5000]);
+
+% OUTPUT SIGNAL
+figure('Color','w');
+subplot(2,1,1);
+plot(Instrumental); grid on;
+title('Instrumental Output – Time Domain');
+xlabel('Samples'); ylabel('Amplitude');
+
+subplot(2,1,2);
+plot(faxis, Out_fft(1:Nfft/2)); grid on;
+hold on;
+xline(Wc1,'--r'); xline(Wc2,'--r');
+title('Instrumental Output – Frequency Domain');
+xlabel('Frequency (Hz)'); ylabel('Magnitude');
+xlim([0 5000]);
+
+%% --------------------------------------------------------
+% STEP 7: PRINT DSP PARAMETERS (EXAM REQUIRED)
+% ---------------------------------------------------------
+fprintf('\n=========== DSP PARAMETERS ===========\n');
+fprintf('Sampling Frequency (Fs)      : %d Hz\n', Fs);
+fprintf('Filter Type                  : FIR Band-Stop\n');
+fprintf('Window Used                  : Hamming\n');
+fprintf('Filter Order                 : %d\n', N);
+fprintf('Lower Cutoff Frequency (Wc1) : %d Hz\n', Wc1);
+fprintf('Upper Cutoff Frequency (Wc2) : %d Hz\n', Wc2);
+fprintf('FFT Size                     : %d\n', Nfft);
+fprintf('====================================\n');
+
+disp('Window-based FIR vocal suppression completed successfully.');
