@@ -1,0 +1,33 @@
+Description
+
+This project implements a DSP-based approach to suppress vocal components from stereo audio signals and extract instrumental background music using MATLAB.
+
+Methodology
+
+Stereo Mid–Side signal decomposition
+
+Vocal band identification (300–3400 Hz)
+
+Butterworth band-stop filtering
+
+Time-domain and frequency-domain validation
+
+Tools & Technologies
+
+MATLAB
+
+FFT
+
+Digital Filters (Butterworth)
+
+Results
+
+Clear attenuation of vocal frequency band in output spectrum
+
+Instrumental components preserved with minimal distortion
+
+Applications
+
+Audio preprocessing for embedded DSP systems
+
+Signal conditioning for real-time audio applications
